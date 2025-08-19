@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>항공권 검색</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- ✅ Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+</head>
+<body>
+    <div class="hero">
+        <h1>✈️ 여행을 떠나볼까요?</h1>
+        <p>출발지와 도착지를 선택하고 원하는 날짜를 골라보세요.</p>
+    </div>
+
+    <div class="search-box">
+        <form action="/search" method="post">
+            <div class="form-group">
+                <label for="origin">출발 공항</label>
+                <select id="origin" name="origin" class="airport-select" style="width: 100%"></select>
+            </div>
+            
+            <div class="form-group">
+                <label for="destination">도착 공항</label>
+                <select id="destination" name="destination" class="airport-select" style="width: 100%"></select>
+            </div>
+            
+            <div class="form-group">
+                <label for="date">출발 날짜</label>
+                <input type="date" id="date" name="date" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="adults">성인 수</label>
+                <input type="number" id="adults" name="adults" min="1" value="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="airline">항공사 코드 (선택)</label>
+                <input type="text" id="airline" name="airline" placeholder="예: 7C">
+            </div>
+            
+            <button type="submit" class="btn">검색하기</button>
+            <button type="submit" formaction="/lowest" class="btn btn-secondary">최저가 알림받기</button>
+        </form>
+    </div>
+
+    <!-- ✅ jQuery & Select2 JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+    $(".airport-select").select2({
+        placeholder: "도시나 공항을 입력하세요",
+        ajax: {
+            url: "/api/airports",
+            dataType: "json",
+            delay: 250,
+            data: function (params) {
+                return { city: params.term }; // 검색어 전달
+            },
+            processResults: function (data) {
+                return {
+                    results: data.map(a => ({
+                        id: a.code,
+                        text: `${a.code} - ${a.name} (${a.name_kr}, ${a.country})`
+                    }))
+                };
+            },
+        cache: true
+        },
+      minimumInputLength: 2 // 2글자 이상 입력 시 검색 시작
+    });
+    </script>
+</body>
+</html>

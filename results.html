@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>항공권 검색 결과</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="results-container">
+        <h1>{{ mode }}검색 결과</h1>
+        {% if result %}
+            <ul class="results-list">
+                {% for r in result %}
+                    {% if r.error %}
+                        <li class="error">{{ r.error }}</li>
+                    {% else %}
+                        <li>
+                            <strong>{{ r.dep }} → {{ r.arr }}</strong><br>
+                            시간: {{ r.dep_time }} → {{ r.arr_time }}<br>
+                            항공편: {{ r.airline }}{{ r.flight_no }}<br>
+                            가격: {{ r.price }} {{ r.currency }}
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>검색 결과가 없습니다.</p>
+        {% endif %}
+        <a href="/" class="btn">🔙 다시 검색하기</a>
+    </div>
+</body>
+</html>
+
+
