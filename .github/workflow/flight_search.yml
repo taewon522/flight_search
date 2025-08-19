@@ -1,35 +1,67 @@
-# 항공 정를 20분마다 csv로 저장!!
-name: flight_search 20m
+name: Run flight_search
 
-on: # 작업을 수행하는 조건
-  schedule: # 스케쥴링
-    - cron: "*/300 * * * *" # 매 5분마다
-  workflow_dispatch: # 수동 실행 가능
-jobs: # 실행할 작업을 정의
-  request_weather:
-    runs-on: ubuntu-latest # 우분투 최신 환경
+on:
+  workflow_dispatch:           # 수동 실행 버튼 유지
+  schedule:
+    - cron: '6,17,29,41,53 * * * *'     
+
+# CSV 커밋/푸시 권한
+permissions:
+  contents: write
+
+# 동시 실행 방지(이전 실행이 길어질 때 겹치지 않도록)
+concurrency:
+  group: flight_search
+  cancel-in-progress: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
     steps:
-      - name: 저장소 체크아웃
-        uses: actions/checkout@v3 # 현재 github 저장소를 가져온다
-        with: # 같이 진행할 작업
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Python 설정
-        uses: actions/setup-python@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          python-version: "3.9"
-      - name: Python 패키지 설치
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
         run: |
-          pip install requests
-          pip install amadeus
-          pip install python-dotenv
-      - name: 날씨 데이터 가져오기
-        env:
-          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      # 멀티라인 시크릿을 환경변수로 export (CR 제거)
+      - name: Export secrets to env
+        shell: bash
+        run: |
+          printf "%s\n" "${{ secrets.FLIGHT_API_KEY }}" | tr -d '\r' >> "$GITHUB_ENV"
+
+      # 못 찾더라도 실패하지 않게
+      - name: Debug env presence
+        shell: bash
+        run: |
+          env | grep -E 'AMADEUS_CLIENT_ID|AMADEUS_CLIENT_SECRET|AMADEUS_HOSTNAME' \
+            | sed 's/=.*/=***redacted***/' || true
+
+      - name: Run script
         run: python flight_search.py
-      - name: 변경 사항 커밋 및 푸시
+
+      - name: Upload CSV artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: offers
+          path: |
+            data/*.csv
+            offers_*_*.csv
+          if-no-files-found: ignore
+
+      - name: Commit and push data
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions@github.com"
-          git add seoul_weather.csv
-          git commit -m "Update weather data (auto)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/*.csv || true
+          git commit -m "data: append $(date -u +'%F %T') [skip ci]" || echo "No changes"
           git push
